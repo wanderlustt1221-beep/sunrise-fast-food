@@ -105,7 +105,7 @@ export default function AdminSidebar({ isOpen, onClose }: Props) {
                                         }`}>
                                         <Icon size={15} strokeWidth={active ? 2.5 : 2} />
                                     </span>
-                                    <span className="flex-1">{label}</span>
+                                    <span className="flex-1 text-white">{label}</span>
                                     {active && (
                                         <ChevronRight size={13} className="text-amber-500/60" />
                                     )}
