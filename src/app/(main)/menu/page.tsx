@@ -4,6 +4,9 @@ import MenuClient from "@/components/products/MenuClient";
 import { connectDB } from "@/lib/db";
 import Product from "@/models/Product";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 async function getProducts() {
     try {
         await connectDB();
