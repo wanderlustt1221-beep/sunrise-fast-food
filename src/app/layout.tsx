@@ -5,6 +5,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import NotificationPrompt from "@/components/shared/NotificationPrompt";
+import { Analytics } from "@vercel/analytics/next";
 
 // ─── Viewport ──────────────────────────────────────────────────────────────
 export const viewport: Viewport = {
@@ -88,6 +89,9 @@ export default function RootLayout({
                         error:   { iconTheme: { primary: "#ef4444", secondary: "#fff1f2" } },
                     }}
                 />
+
+                {/* Vercel Web Analytics */}
+                <Analytics />
             </body>
         </html>
     );
