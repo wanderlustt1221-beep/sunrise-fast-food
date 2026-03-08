@@ -2,10 +2,10 @@
 
 // src/components/auth/LoginForm.tsx
 // Light warm premium login form — Sunrise Fast Food & Juice and Ice-Cream Corner.
-// Robust redirect: intended destination > homepage. Admin-safe.
+// Faster-feel auth redirect using window.location.href for immediate navigation.
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
 
@@ -24,16 +24,29 @@ type FieldProps = {
     required?: boolean;
 };
 
-function Field({ id, label, type, value, onChange, placeholder, autoComplete, icon, rightEl, required }: FieldProps) {
+function Field({
+    id,
+    label,
+    type,
+    value,
+    onChange,
+    placeholder,
+    autoComplete,
+    icon,
+    rightEl,
+    required,
+}: FieldProps) {
     return (
         <div className="flex flex-col gap-1.5">
             <label htmlFor={id} className="text-[11px] font-black uppercase tracking-[0.18em] text-stone-500">
                 {label}
             </label>
+
             <div className="relative flex items-center">
                 <span className="pointer-events-none absolute left-3.5 text-stone-400">
                     {icon}
                 </span>
+
                 <input
                     id={id}
                     type={type}
@@ -42,8 +55,9 @@ function Field({ id, label, type, value, onChange, placeholder, autoComplete, ic
                     placeholder={placeholder}
                     autoComplete={autoComplete}
                     required={required}
-                    className="w-full rounded-xl border border-amber-200 bg-amber-50/40 py-3 pl-10 pr-10 text-sm font-medium text-stone-800 placeholder:text-stone-400 transition-all duration-200 focus:border-orange-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-200 hover:border-amber-300"
+                    className="w-full rounded-xl border border-amber-200 bg-amber-50/40 py-3 pl-10 pr-10 text-sm font-medium text-stone-800 placeholder:text-stone-400 transition-all duration-200 hover:border-amber-300 focus:border-orange-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-200"
                 />
+
                 {rightEl && <span className="absolute right-3.5">{rightEl}</span>}
             </div>
         </div>
@@ -51,36 +65,57 @@ function Field({ id, label, type, value, onChange, placeholder, autoComplete, ic
 }
 
 export default function LoginForm({ redirectTo = "/" }: LoginFormProps) {
-    const router = useRouter();
     const searchParams = useSearchParams();
 
-    const [email, setEmail]       = useState("");
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPass, setShowPass] = useState(false);
-    const [loading, setLoading]   = useState(false);
+    const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!email || !password) {
+
+        if (!email.trim() || !password.trim()) {
             toast.error("Please fill in all fields");
             return;
         }
+
         setLoading(true);
+
         try {
             const res = await fetch("/api/auth/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({
+                    email: email.trim(),
+                    password,
+                }),
             });
+
             const data = await res.json();
+
             if (!res.ok) {
                 toast.error(data.message || "Login failed. Please try again.");
                 return;
             }
 
-            // ── Premium success toast ──────────────────────────────────
-            toast.success("Welcome back! 🌅 Order your favourites.", {
-                duration: 3500,
+            // Save lightweight user info immediately for smoother next-page navbar hydration
+            try {
+                if (data?.user) {
+                    localStorage.setItem(
+                        "cafeapp_user",
+                        JSON.stringify({
+                            name: data.user.name ?? "",
+                            email: data.user.email ?? "",
+                            phone: data.user.phone ?? "",
+                            address: data.user.address ?? "",
+                        })
+                    );
+                }
+            } catch {}
+
+            toast.success("Welcome back! 🌅 Redirecting you now...", {
+                duration: 2200,
                 style: {
                     background: "#fff",
                     color: "#1c1917",
@@ -93,25 +128,28 @@ export default function LoginForm({ redirectTo = "/" }: LoginFormProps) {
                 iconTheme: { primary: "#f97316", secondary: "#fff" },
             });
 
-            // ── Robust redirect logic ──────────────────────────────────
-            const role     = data.user?.role ?? "user";
-            // Prefer query param redirect > prop redirect > "/"
-            const qParam   = searchParams.get("redirect");
+            const role = data.user?.role ?? "user";
+            const qParam = searchParams.get("redirect");
             const intended = qParam || redirectTo;
 
+            let dest = "/";
+
             if (role === "admin") {
-                // Admin: go to admin area, or their intended admin page
-                const dest = intended?.startsWith("/admin") ? intended : "/admin";
-                router.push(dest);
+                dest = intended?.startsWith("/admin") ? intended : "/admin";
             } else {
-                // Normal user: go to intended page, but NEVER /admin
-                const dest =
-                    intended && intended !== "/" && !intended.startsWith("/admin") && !intended.startsWith("/auth")
+                dest =
+                    intended &&
+                    intended !== "/" &&
+                    !intended.startsWith("/admin") &&
+                    !intended.startsWith("/auth")
                         ? intended
                         : "/";
-                router.push(dest);
             }
 
+            // Slightly defer so toast paints, then hard navigate for immediate-feel auth transition
+            setTimeout(() => {
+                window.location.href = dest;
+            }, 150);
         } catch {
             toast.error("Something went wrong. Please try again.");
         } finally {
@@ -121,7 +159,6 @@ export default function LoginForm({ redirectTo = "/" }: LoginFormProps) {
 
     return (
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
-
             <Field
                 id="login-email"
                 label="Email Address"
@@ -156,7 +193,6 @@ export default function LoginForm({ redirectTo = "/" }: LoginFormProps) {
                 required
             />
 
-            {/* Forgot password */}
             <div className="-mt-1 flex justify-end">
                 <a
                     href="#"
@@ -166,23 +202,27 @@ export default function LoginForm({ redirectTo = "/" }: LoginFormProps) {
                 </a>
             </div>
 
-            {/* CTA */}
             <button
                 type="submit"
                 disabled={loading}
-                className="group mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 py-3.5 text-sm font-black text-white shadow-lg shadow-orange-200 transition-all duration-300 hover:brightness-110 hover:shadow-orange-300 disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.98]"
+                className="group mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 py-3.5 text-sm font-black text-white shadow-lg shadow-orange-200 transition-all duration-300 hover:brightness-110 hover:shadow-orange-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
             >
                 {loading ? (
-                    <Loader2 size={16} className="animate-spin" />
+                    <>
+                        <Loader2 size={16} className="animate-spin" />
+                        Signing you in...
+                    </>
                 ) : (
                     <>
                         Sign In to Your Account
-                        <ArrowRight size={15} className="transition-transform group-hover:translate-x-1 duration-300" />
+                        <ArrowRight
+                            size={15}
+                            className="transition-transform duration-300 group-hover:translate-x-1"
+                        />
                     </>
                 )}
             </button>
 
-            {/* Microcopy */}
             <p className="text-center text-[11px] font-medium text-stone-400">
                 🍽️ Fresh food. Faster ordering. Made for you.
             </p>
